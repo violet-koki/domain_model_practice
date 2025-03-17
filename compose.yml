@@ -1,0 +1,83 @@
+networks:
+  default:
+    name: practice-dev-network
+    external: true
+
+volumes:
+  localstack:
+  postgres-data:
+  vendor-user:
+
+services:
+  user-nginx:
+    build:
+      context: ./docker/nginx
+      target: runner
+    container_name: "user-nginx"
+    ports:
+      - 8081:80
+    volumes:
+      - ./mail-backend-web:/var/www/html
+    depends_on:
+      - mail-backend-web
+    environment:
+      - PHP_UPSTREAM_HOST=mail-backend-web
+      - PHP_UPSTREAM_PORT=9000
+      - SERVER_NAME=localhost
+      - NETWORK_CIDR=172.17.0.0/16
+      - NGINX_RESOLVER=127.0.0.11
+      - NGINX_WORKER_PROCESSES=2
+  mail-backend-web:
+    build:
+      context: ./mail-backend-web
+      target: development
+    container_name: mail-backend-web
+    working_dir: /var/www/html
+    volumes:
+      - ./mail-backend-web:/var/www/html
+      - vendor-user:/var/www/html/vendor
+    depends_on:
+      - postgres-mail
+    environment:
+      # ローカル環境のサーバ環境変数設定
+      - APP_ENV=local
+      - APP_KEY=base64:TuooETzeVD27N+oZL6SZuNFzwmcjUtM74m0Lwsm97g8=
+      - DB_HOST=postgres-mail
+      - DB_DATABASE=main01
+      - DB_USERNAME=app_db_user
+      - DB_PASSWORD=app_db_user
+      - AWS_DEFAULT_REGION=ap-northeast-1
+      - AWS_S3_MEMBER_BUCKET=members
+      - AWS_S3_FACILITY_BUCKET=facilities
+      - AWS_MOVIE_DOMAIN=
+      # ローカル環境のPHP設定
+      - PHP_EXPOSE_PHP=On
+      - PHP_DISPLAY_ERRORS=On
+      - PHP_HTML_ERRORS=On
+      - PHP_OPC_ENABLE=O
+      - PHP_APC_ENABLE=Off
+      # ローカルスタック用
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_USE_PATH_STYLE_ENDPOINT=true
+      - AWS_S3_ENDPOINT=http://localstack:4566/
+
+  postgres-mail:
+    image: postgres:15.4-alpine3.18
+    container_name: postgres-mail
+    environment:
+      - POSTGRES_DB=main01
+      - POSTGRES_USER=app_db_user
+      - POSTGRES_PASSWORD=app_db_user
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  local_ses:
+    container_name: local_ses
+    build:
+      context: .
+      dockerfile: docker/local_ses/Dockerfile
+    ports:
+      - "8005:8005"
