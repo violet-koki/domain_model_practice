@@ -74,10 +74,10 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  # local_ses:
-  #   container_name: local_ses
-  #   build:
-  #     context: ./docker/local_ses
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8005:8005"
+  local_ses_mail:
+    container_name: local_ses
+    build:
+      context: ./docker/local_ses
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
